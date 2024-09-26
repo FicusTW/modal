@@ -3,14 +3,16 @@ import os
 import sys
 import shlex
 
-# Change from Stub to App
+# Define the app
 app = modal.App("stable-diffusion-webui")
 
 # Handle volume creation
 try:
     volume = modal.NetworkFileSystem.from_name("stable-diffusion-webui")
+    print("Volume found.")
 except modal.VolumeNotFound:
     volume = modal.NetworkFileSystem.new().persisted("stable-diffusion-webui")
+    print("Volume created.")
 
 @app.function(
     image=modal.Image.from_registry("nvidia/cuda:12.2.0-base-ubuntu22.04", add_python="3.11")
@@ -31,21 +33,22 @@ except modal.VolumeNotFound:
     timeout=60000,
 )
 async def run():
+    print("Starting run...")
     os.system("git clone -b v2.6 https://github.com/camenduru/stable-diffusion-webui /content/stable-diffusion-webui")
     os.chdir("/content/stable-diffusion-webui")
     os.system("git reset --hard")
-    
-    # Use aria2 to download the models
+
+    # Download models using aria2
     os.system("aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/counterfeit-xl/resolve/main/counterfeitxl_v10.safetensors -d /content/stable-diffusion-webui/models/Stable-diffusion -o counterfeitxl_v10.safetensors")
     os.system("aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/juggernaut-xl/resolve/main/juggernautXL_version2.safetensors -d /content/stable-diffusion-webui/models/Stable-diffusion -o juggernautXL_version2.safetensors")
     os.system("aria2c --console-log-level=error -c -x 16 -s 16 -k 1M https://huggingface.co/ckpt/sd_xl_refiner_1.0/resolve/main/sd_xl_refiner_1.0_0.9vae.safetensors -d /content/stable-diffusion-webui/models/Stable-diffusion -o sd_xl_refiner_1.0_0.9vae.safetensors")
 
     os.environ['HF_HOME'] = '/content/stable-diffusion-webui/cache/huggingface'
-    
+
     # Prepare for launching the application
     sys.path.append('/content/stable-diffusion-webui')
     sys.argv = shlex.split("--cors-allow-origins=* --xformers --theme dark --gradio-debug --share")
-    
+
     from modules import launch_utils
     launch_utils.startup_timer.record("initial startup")
     launch_utils.prepare_environment()
