@@ -3,9 +3,14 @@ import os
 import sys
 import shlex
 
-# Change `Stub` to `App` and rename the variable to `app`
+# Change from Stub to App
 app = modal.App("stable-diffusion-webui")
-volume = modal.NetworkFileSystem.from_name("stable-diffusion-webui")
+
+# Handle volume creation
+try:
+    volume = modal.NetworkFileSystem.from_name("stable-diffusion-webui")
+except modal.VolumeNotFound:
+    volume = modal.NetworkFileSystem.new().persisted("stable-diffusion-webui")
 
 @app.function(
     image=modal.Image.from_registry("nvidia/cuda:12.2.0-base-ubuntu22.04", add_python="3.11")
